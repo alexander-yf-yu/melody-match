@@ -1,0 +1,109 @@
+{% extends "bootstrap/base.html" %}
+
+{% block title %}Recommend Song{% endblock %}
+
+{% block content %}
+	<div class="container">
+
+		<a class="btn btn-outline-primary active my-5" href="{{ url_for('index') }}">Back to recordings</a>
+
+		<br>
+		<hr>
+		<br>
+
+		<h1 class="my-4">Transcription and Mood Analysis:</h1>
+
+		<!-- <p>{{ transcribe_response }}</p> -->
+		{% for sentence in transcribe_response %}
+			{% if sentence['sentiment'] == 'POSITIVE' %}
+			<div class="container rounded p-3 my-3" style="background-color: lightgreen;">
+				<p class="lead p-2 bg-light rounded" >{{ sentence['text'] }}</p>
+				<p>sentiment: {{ sentence['sentiment'] }}</p>
+				<p>confidence: {{ sentence['confidence'] }}</p>
+			</div>
+			{% endif %}
+			{% if sentence['sentiment'] == 'NEUTRAL' %}
+			<div class="container rounded p-3 my-3" style="background-color: lightgrey;">
+				<p class="lead p-2 bg-light rounded" >{{ sentence['text'] }}</p>
+				<p>sentiment: {{ sentence['sentiment'] }}</p>
+				<p>confidence: {{ sentence['confidence'] }}</p>
+			</div>
+			{% endif %}
+			{% if sentence['sentiment'] == 'NEGATIVE' %}
+			<div class="container rounded p-3 my-3" style="background-color: pink;">
+				<p class="lead p-2 bg-light rounded" >{{ sentence['text'] }}</p>
+				<p>sentiment: {{ sentence['sentiment'] }}</p>
+				<p>confidence: {{ sentence['confidence'] }}</p>
+			</div>
+			{% endif %}
+		{% endfor %}
+
+
+		<br>
+		<hr>
+		<br>
+
+		<h1 class="my-4">Weighted Average Sentiment Score:</h1>
+		<p class="lead">{{ weighted_sum }}</p>
+
+		<br>
+		<hr>
+		<br>
+
+		<h1 class="my-4">Song recommendations</h1>
+		{% set col = 3 %}
+		{% set rows = (songs|length / col)|round(0, 'ceil')|int %}
+		{% for i in range((songs|length / col)|round(0, 'ceil')|int)%}
+		<div class="card-group">
+			{% for j in range(col)%}
+				{% set idx = i*col+j %}
+				{% if idx < songs|length %}
+				<!-- <div class="card" style="max-width: 30%;"> -->
+				<div class="card m-3">
+					<img class="card-img-top" src="{{ songs[idx][0]['album']['images'][0]['url'] }}" alt="Card image cap">
+					<div class="card-body">
+						<h5 class="card-title">{{ songs[idx][0]['name'] }}</h5>
+						<!-- <p class="card-text">by {{ songs[idx][0]['artists'][0]["name"]  }}</p> -->
+						<p class="card-text">by {{ songs[idx][0]['artists']|map(attribute='name')|join(', ') }} </p>
+						<a class="card-text btn btn-outline-success" href="{{ songs[idx][0]['uri'] }}">Play on Spotify Client</a>
+					</div>
+					<div class="card-footer">
+						<small class="text-muted">Valence value: {{ songs[idx][1] }}</small>
+					</div>
+				</div>
+				{% endif %}
+			{% endfor %}
+		</div>
+		{% endfor %}
+
+		<br>
+		<hr>
+		<br>
+
+		<h1>Closest Match</h1>
+		<div class="card m-3">
+			<img class="card-img-top" src="{{ closest[0]['album']['images'][0]['url'] }}" alt="Card image cap">
+			<div class="card-body">
+				<h5 class="card-title">{{ closest[0]['name'] }}</h5>
+				<!-- <p class="card-text">by {{ closest[0]['artists'][0]["name"]  }}</p> -->
+				<p class="card-text">by {{ closest[0]['artists']|map(attribute='name')|join(', ') }} </p>
+				<a class="card-text btn btn-outline-success" href="{{ closest[0]['uri'] }}">Play on Spotify Client</a>
+			</div>
+			<div class="card-footer">
+				<small class="text-muted">Valence value: {{ closest[1] }}</small>
+			</div>
+		</div>
+	</div>
+
+{% endblock %}
+
+{% block scripts %}
+	{{super()}}
+    <!-- inserting these scripts at the end to be able to use all the elements in the DOM -->
+  	<script src="https://cdn.rawgit.com/mattdiamond/Recorderjs/08e7abd9/dist/recorder.js"></script>
+  	<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+	<!-- CSS -->
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-0evHe/X+R7YkIZDRvuzKMRqM+OrBnVFBL6DOitfPri4tjfHxaWutUpFmBp4vmVor" crossorigin="anonymous">
+	<!-- JavaScript Bundle with Popper -->
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/js/bootstrap.bundle.min.js" integrity="sha384-pprn3073KE6tl6bjs2QrFaJGz5/SUsLqktiwsUTF55Jfv3qYSDhgCecCxMW52nD2" crossorigin="anonymous"></script>
+{% endblock %}
