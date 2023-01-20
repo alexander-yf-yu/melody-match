@@ -15,15 +15,11 @@ def closest_song(songs, target):
     smallest_diff = float('inf')
     for song in songs:
         item = song['track']
-        # print(idx, item['uri'], item['name'], [a['name'] for a in item['artists']])
         artists = [a['name'] for a in item['artists']]
         # uri = item['uri'].split(":")[-1]
         uri = item['uri']
-        # print(item['name'], len((sp.audio_features(uri))))
         valence = sp.audio_features(uri)[0]['valence']
-        print(item['name'], artists, valence)
         # track = item['track']
-        # print(idx, track['artists'][0]['name'], " – ", track['name'])
 
         current_diff = abs(target - valence)
 
@@ -38,15 +34,11 @@ def filter_songs(songs, min_valence, max_valence):
 
     for song in songs:
         item = song['track']
-        # print(idx, item['uri'], item['name'], [a['name'] for a in item['artists']])
         artists = [a['name'] for a in item['artists']]
         # uri = item['uri'].split(":")[-1]
         uri = item['uri']
-        # print(item['name'], len((sp.audio_features(uri))))
         valence = sp.audio_features(uri)[0]['valence']
-        print(item['name'], artists, valence)
         # track = item['track']
-        # print(idx, track['artists'][0]['name'], " – ", track['name'])
         if min_valence <= valence and valence <= max_valence:
             selected.append((item, valence))
 
@@ -60,17 +52,10 @@ copyright_free_music_uri = '7M8y5FnWIYA3DFEh9d4Zo0'
 my_wrapped_2022 = '37i9dQZF1F0sijgNaJdgit'
 SONG_LIST = sp.playlist_tracks(my_wrapped_2022)['items']
 
-# print(SONG_LIST[0])
-# print(SONG_LIST[0].keys())
-# print(SONG_LIST[0]['track'])
-# print(SONG_LIST[0].values())
-# for t in SONG_LIST[0].values():
-#     print(t)
-#   print("00000000")
-#   print(SONG_LIST[0]['track'].keys())
-
 ASSEMBLYAI_UPLOAD_ENDPOINT = "https://api.assemblyai.com/v2/upload"
 ASSEMBLYAI_TRANSCRIPT_ENDPOINT = "https://api.assemblyai.com/v2/transcript"
+
+audio_file_extensions = ('.wav', '.m4a', '.mp3', '.flac', '.aiff', '.mp4')
 
 def read_file(filename, chunk_size=5242880):
     with open(filename, 'rb') as _file:
@@ -88,32 +73,30 @@ def create_app():
     def index():
 
         audio_dir_path = os.path.join(app.static_folder, 'audio')
-
-        audio_files = [f for f in os.listdir(audio_dir_path) if os.path.isfile(os.path.join(audio_dir_path, f))]
+        
+        audio_files = []
+        for f in os.listdir(audio_dir_path):
+            if os.path.isfile(os.path.join(audio_dir_path, f)) and f.lower().endswith(audio_file_extensions):
+                audio_files.append(f)
         print(audio_files)
          
         return render_template('bf-index.html', audio_subdir='audio', audio_files=audio_files)
 
     @app.route('/recommend/<filename>', methods=["GET"])
     def recommend(filename):
-        # args = request.args
-        # fname = args.get("filename")
-        print(filename)
 
         local_filename = os.path.join(app.static_folder, 'audio', filename)
         if not os.path.exists(local_filename):
             return Response("no such file in local storage", status=500)
 
         # upload to assemblyai
-        headers = {'authorization': os.environ['API_KEY']}
+        headers = {'authorization': os.environ['ASSEMBLYAI_API_KEY']}
         response = requests.post(
             ASSEMBLYAI_UPLOAD_ENDPOINT,
             headers=headers,
             data=read_file(local_filename)
         )
-        print(response)
         upload_response = response.json()
-        print(response.json())
 
         # send POST transcribe request to assemblyai
         json = {
@@ -121,11 +104,10 @@ def create_app():
             "sentiment_analysis": True
         }
         headers = {
-            "authorization": os.environ['API_KEY'],
+            "authorization": os.environ['ASSEMBLYAI_API_KEY'],
             "content-type": "application/json"
         }
         response = requests.post(ASSEMBLYAI_TRANSCRIPT_ENDPOINT, json=json, headers=headers)
-        print(response.json())
         transcribe_response = response.json()
 
         # query assemblyai transcribe request and check for completion
@@ -137,7 +119,6 @@ def create_app():
                 return Response("assembly ai transcribe error", status=500)
 
             print(transcript_id)
-            print("ep for get: ", urljoin(ASSEMBLYAI_TRANSCRIPT_ENDPOINT + '/', transcript_id))
             response = requests.get(urljoin(ASSEMBLYAI_TRANSCRIPT_ENDPOINT + '/', transcript_id), headers=headers)
             print(response)
             transcript_status = response.json()['status']
